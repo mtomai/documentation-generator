@@ -1,7 +1,7 @@
-package eu.example.poc.documentation.generator;
+package eu.example.poc.documentation.generator.core;
 
 import eu.example.poc.documentation.generator.consts.StyleEnum;
-import eu.example.poc.documentation.generator.section.SectionService;
+import eu.example.poc.documentation.generator.core.parser.DocumentParser;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
@@ -22,6 +22,9 @@ public class DocumentationGeneratorCore {
 	@Autowired
 	private SectionService sectionService;
 
+	@Autowired
+	private DocumentParser documentParser;
+
 	@SneakyThrows
 	public void generateDocumentation() {
 		XWPFDocument document = new XWPFDocument();
@@ -31,15 +34,11 @@ public class DocumentationGeneratorCore {
 			tokener = new JSONTokener(Objects.requireNonNull(is));
 
 			JSONObject root = new JSONObject(tokener);
-			JSONObject info = (JSONObject) root.get("info");
-			String title = info.getString("title");
+			documentParser.createIntroduction(document, root);
 
-			sectionService.madeSection(document, StyleEnum.TITLE, 28, title);
+			documentParser.createApiDefinition(document,root);
+
 		}
-
-
-		sectionService.madeSection(document, null, 12, "Body \n acapo");
-
 
 		//TODO: TAKE THIS FROM PROP
 		creatDocxFile(document, "example.docx");

@@ -1,4 +1,4 @@
-package eu.example.poc.documentation.generator.section;
+package eu.example.poc.documentation.generator.core;
 
 import eu.example.poc.documentation.generator.consts.StyleEnum;
 import lombok.extern.slf4j.Slf4j;
@@ -13,12 +13,16 @@ import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTStyle;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STStyleType;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.IntStream;
+
 @Service
 @Slf4j
 public class SectionService {
 
 
-	public void madeSection(XWPFDocument document, StyleEnum styleEnum, int pt, String text) {
+	public void makeSection(XWPFDocument document, StyleEnum styleEnum, int pt, String text) {
 		XWPFParagraph paragraph = document.createParagraph();
 
 		if(styleEnum != null) {
@@ -28,7 +32,18 @@ public class SectionService {
 
 		XWPFRun run = paragraph.createRun();
 		run.setFontSize(pt);
-		run.setText(text);
+
+		if(text.contains("\n"))  {
+			List<String> splittedText = Arrays.asList(text.split("\n"));
+			run.setText(splittedText.get(0), 0);
+			IntStream.range(1, splittedText.size()).forEach(i -> {
+				run.addBreak();
+				run.setText(splittedText.get(i));
+			});
+		} else {
+			run.setText(text);
+		}
+
 
 	}
 

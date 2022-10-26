@@ -1,7 +1,8 @@
 package eu.example.poc.documentation.generator.consts;
 
 public enum StyleEnum {
-	TITLE("Custom Title");
+	TITLE("Custom Title"),
+	TEXT("Custom Text");
 
 
 	private final String style;

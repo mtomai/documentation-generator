@@ -2,19 +2,14 @@ package eu.example.poc.documentation.generator.core.parser;
 
 import eu.example.poc.documentation.generator.consts.StyleEnum;
 import eu.example.poc.documentation.generator.core.SectionService;
-import eu.example.poc.documentation.generator.core.TableComponent;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
+import java.util.Iterator;
+import java.util.Locale;
 
 @Service
 @Slf4j
@@ -23,7 +18,7 @@ public class DocumentParser {
 	@Autowired
 	private SectionService sectionService;
 	@Autowired
-	private TableComponent tableComponent;
+	private ServerParser serverParser;
 
 
 	public void createIntroduction(XWPFDocument document, JSONObject root) {
@@ -44,38 +39,68 @@ public class DocumentParser {
 
 		sectionService.makeSection(document, StyleEnum.TITLE, 20, "API Definition");
 
-		createServerSection(document, root);
+		serverParser.createServerSection(document, root);
+
+		createEndpoint(document, root);
 
 	}
 
+	public void createEndpoint(XWPFDocument document, JSONObject root) {
+		sectionService.makeSection(document, StyleEnum.TITLE, 18, "Endpoint");
 
-	private void createServerSection(XWPFDocument document, JSONObject info) {
+		JSONObject paths = (JSONObject) root.get("paths");
+		paths.keys().forEachRemaining(path -> {
+			JSONObject pathObject = (JSONObject) paths.get(path);
+			pathObject.keys().forEachRemaining(method -> {
 
-		sectionService.makeSection(document, StyleEnum.TITLE, 16, "Server Name");
+				sectionService.makeSection(document, StyleEnum.TEXT, 16, method.toUpperCase(Locale.ROOT)+ " "+ path);
+				JSONObject definition = (JSONObject) pathObject.get(method);
 
-		List<List<String>> tableServer = new ArrayList<>();
-		List<String> tableHeaders = Arrays.asList("Host", "Description");
-		tableServer.add(tableHeaders);
-
-
-		if(info.has("servers")) {
-
-			JSONArray servers = info.getJSONArray("servers");
-
-			IntStream.range(0, servers.length()).mapToObj(i -> (JSONObject) servers.get(i)).forEach(server -> {
-				List<String> content = new ArrayList<>();
-				content.add(server.getString("url"));
-				if (server.has("description")) {
-					content.add(server.getString("description"));
-				} else {
-					content.add("N/A");
+				if(definition.has("summary")) {
+					sectionService.makeSection(document, StyleEnum.TEXT, 12, definition.getString("summary"));
 				}
-				tableServer.add(content);
+				if(definition.has("description")) {
+					sectionService.makeSection(document, StyleEnum.TEXT, 12, definition.getString("description"));
+				}
+				if(definition.has("requestBody")) {
+					JSONObject requestBody = (JSONObject) definition.get("requestBody");
+					JSONObject content = (JSONObject) requestBody.get("content");
+					String contentType = content.keys().next();
+					JSONObject schema = ((JSONObject) content.get(contentType)).getJSONObject("schema");
+
+					if(schema.has("type")) {
+						String type = schema.getString("type");
+
+						if(schema.has("items")) {
+							JSONObject items = (JSONObject) schema.get("items");
+
+							String[] classesPath = items.getString("$ref").split("/");
+							String className = classesPath[classesPath.length - 1];
+
+							sectionService.makeSection(document, StyleEnum.TEXT, 12, "Request Body: "+ type + "of" + className);
+						} else if (schema.has("additionalProperties")) {
+
+						}
+
+					} else {
+						String[] classesPath = schema.getString("$ref").split("/");
+						String className = classesPath[classesPath.length - 1];
+
+
+						sectionService.makeSection(document, StyleEnum.TEXT, 12, "Request Body: "+ className);
+					}
+
+
+				}
+
 			});
 
-		}
-		tableComponent.makeTable(document, tableServer);
+
+
+		});
+
 
 	}
+
 
 }
